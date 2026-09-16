@@ -14,7 +14,26 @@ struct ChatView: View {
     var body: some View { NavigationStack { VStack(spacing: 0) { if store.messages.isEmpty { ContentUnavailableView("向服务器助手提问", systemImage: "sparkles", description: Text("例如：查看服务器当前状态")) } else { ScrollView { LazyVStack(alignment: .leading, spacing: 12) { ForEach(store.messages) { message in MessageBubble(message: message) } }.padding() } }; Divider(); HStack(alignment: .bottom) { TextField("输入请求…", text: $draft, axis: .vertical).lineLimit(1...5).textFieldStyle(.roundedBorder); Button { let value = draft; draft = ""; Task { await store.send(value) } } label: { Image(systemName: "arrow.up.circle.fill").font(.title2) }.disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }.padding() } .navigationTitle("服务器助手") } }
 }
 
-private struct MessageBubble: View { let message: ChatMessage; var body: some View { HStack { if message.role == .user { Spacer(minLength: 40) }; Text(message.text).padding(10).background(color, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(message.role == .user ? .white : .primary); if message.role != .user { Spacer(minLength: 40) } } } private var color: Color { switch message.role { case .user: return .accentColor; case .agent: return Color(uiColor: .secondarySystemBackground); case .event: return .orange.opacity(0.18) } } }
+private struct MessageBubble: View {
+    let message: ChatMessage
+    var body: some View {
+        HStack {
+            if message.role == .user { Spacer(minLength: 40) }
+            Text(message.text)
+                .padding(10)
+                .background(color, in: RoundedRectangle(cornerRadius: 14))
+                .foregroundStyle(message.role == .user ? .white : .primary)
+            if message.role != .user { Spacer(minLength: 40) }
+        }
+    }
+    private var color: Color {
+        switch message.role {
+        case .user: return .accentColor
+        case .agent: return Color(uiColor: .secondarySystemBackground)
+        case .event: return .orange.opacity(0.18)
+        }
+    }
+}
 
 struct TasksView: View {
     @EnvironmentObject private var store: AppStore
