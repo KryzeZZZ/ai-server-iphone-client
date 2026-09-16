@@ -1,0 +1,56 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "AIServerClient/**"
+      - "project.yml"
+      - ".github/workflows/build-ios-ipa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      # This produces an unsigned IPA intentionally. Sideloadly signs it on
+      # Windows using the user's Apple ID; no secrets belong in this repository.
+      - name: Build iPhone app without signing
+        run: |
+          xcodebuild \
+            -project AIServerClient.xcodeproj \
+            -scheme AIServerClient \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/AIServerClient.app Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload AIServerClient-unsigned.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: AIServerClient-unsigned-ipa
+          path: AIServerClient-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
